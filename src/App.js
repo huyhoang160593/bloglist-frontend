@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Notification from './components/Notification'
+import Togglable from './components/Togglable'
 import Blog from './components/Blog'
 import blogService from './services/blogs'
 import loginService from './services/login'
+import BlogForm from './components/BlogForm'
 
 
 const App = () => {
@@ -10,16 +12,15 @@ const App = () => {
   const [username,setUsername] = useState('')
   const [password,setPassword] = useState('')
   const [message,setMessage] = useState(null)
-  const [type, setType] = useState('')
+  const [type, setType] = useState(null)
   const [user, setUser] = useState(null)
-  const [title, setTitle] = useState('')
-  const [author, setAuthor] = useState('')
-  const [url, setUrl] = useState('')
+  const blogFromRef = useRef()
+
 
   useEffect(() => {
     blogService.getAll().then(blogs =>
       setBlogs( blogs )
-    )  
+    )
   }, [])
 
   useEffect(() => {
@@ -30,7 +31,7 @@ const App = () => {
       blogService.setToken(user.token)
     }
   },[])
-  const handleLogin = async (event) =>{
+  const handleLogin = async (event) => {
     event.preventDefault()
     try {
       const user = await loginService.login({
@@ -52,30 +53,84 @@ const App = () => {
     }
   }
 
-  const handleLogout = (event) =>{
+  const handleLogout = (event) => {
     event.preventDefault()
     window.localStorage.removeItem('loggedBlogappUser')
     setUser(null)
   }
 
-  const handleCreate = async (event) =>{
-    event.preventDefault()
-    try {
-      const blog = await blogService.create({
-        title,author,url
+  const handleLikeOf = (id) => {
+    const blog = blogs.find(n => n.id === id)
+    const changedBlog = { ...blog, likes: blog.likes + 1 }
+
+    blogService
+      .update(id, changedBlog)
+      .then(returnedBlog => {
+        setBlogs(blogs.map(blog => blog.id !== id ? blog : returnedBlog))
       })
-      setTitle('')
-      setAuthor('')
-      setUrl('')
-      setBlogs(blogs.concat(blog))
-      setMessage(`a new blog ${title} by ${author} added`)
-      setTimeout(() => {
-        setMessage(null)
-        setType(null)
-      },4000)
-    } catch (error) {
-      console.log(error)
+      // eslint-disable-next-line no-unused-vars
+      .catch(error => {
+        setMessage(`Blog ${blog.title} was already removed from server`)
+        setType('err')
+        setTimeout(() => {
+          setMessage(null)
+          setType(null)
+        },4000)
+      })
+  }
+
+  const handleRemoveOf = (id) => {
+    const blog = blogs.find(n => n.id === id)
+    if(window.confirm(`Remove blog ${blog.title} by ${blog.author}`)){
+      blogService
+        .remove(id)
+        .then(() => {
+          setMessage(`The blog ${blog.title} by ${blog.author} has been removed`)
+          setTimeout(() => {
+            setMessage(null)
+            setType(null)
+          },4000)
+          setBlogs(blogs.filter(blog => blog.id !== id))
+        })
+        // eslint-disable-next-line no-unused-vars
+        .catch(error => {
+          setMessage(`This blog ${blog.title} can't be delete`)
+          setType('err')
+          setTimeout(() => {
+            setMessage(null)
+            setType(null)
+          },4000)
+        })
     }
+  }
+
+  const createBlogForm = () => (
+    <Togglable buttonLabel='create new blog' ref ={blogFromRef}>
+      <BlogForm createBlog={addBlog} />
+    </Togglable>
+  )
+
+  const addBlog = (blogObject) => {
+    blogFromRef.current.toggleVisibility()
+    blogService
+      .create(blogObject)
+      .then(returnBlog => {
+        setBlogs(blogs.concat(returnBlog))
+        setMessage(`a new blog ${returnBlog.title} by ${returnBlog.author} added`)
+        setTimeout(() => {
+          setMessage(null)
+          setType(null)
+        },4000)
+      })
+      // eslint-disable-next-line no-unused-vars
+      .catch(error => {
+        setMessage(`Blog ${blogObject.title} can't be add to server by some reasons`)
+        setType('err')
+        setTimeout(() => {
+          setMessage(null)
+          setType(null)
+        },4000)
+      })
   }
 
   if(user === null) {
@@ -95,12 +150,12 @@ const App = () => {
           </div>
           <div>
             password
-              <input
-                type="password"
-                value={password}
-                name="password"
-                onChange={({ target }) => setPassword(target.value)}
-              />
+            <input
+              type="password"
+              value={password}
+              name="password"
+              onChange={({ target }) => setPassword(target.value)}
+            />
           </div>
           <button type="submit">login</button>
         </form>
@@ -115,41 +170,19 @@ const App = () => {
       <p>{user.name} has logged in
         <button onClick={handleLogout}>logout</button>
       </p>
+      {createBlogForm()}
 
-      <form onSubmit={handleCreate}>
-        <div>
-            title
-            <input
-              type="text"
-              value={title}
-              name="title"
-              onChange={({ target }) => setTitle(target.value)}
-            />
-        </div>
-        <div>
-            author
-              <input
-                type="text"
-                value={author}
-                name="author"
-                onChange={({ target }) => setAuthor(target.value)}
-              />
-        </div>
-        <div>
-            url
-              <input
-                type="text"
-                value={url}
-                name="url"
-                onChange={({ target }) => setUrl(target.value)}
-              />
-        </div>
-        <button type="submit">create</button>
-      </form>
-
-      {blogs.map(blog =>
-        <Blog key={blog.id} blog={blog} />
-      )}
+      {blogs
+        .sort((a,b) => b.likes - a.likes)
+        .map(blog =>
+          <Blog
+            key={blog.id}
+            blog={blog}
+            handleLike={ () => handleLikeOf(blog.id) }
+            handleRemove={ () => handleRemoveOf(blog.id)}
+            username={user.username}
+          />
+        )}
     </div>
   )
 }

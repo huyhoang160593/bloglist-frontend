@@ -3,7 +3,7 @@ const baseUrl = '/api/blogs'
 
 let token = null
 
-const setToken  = newToken =>{
+const setToken  = newToken => {
   token = `bearer ${newToken}`
 }
 const getAll = () => {
@@ -11,7 +11,7 @@ const getAll = () => {
   return request.then(response => response.data)
 }
 
-const create = async newObject =>{
+const create = async newObject => {
   const config = {
     headers: { Authorization: token }
   }
@@ -20,4 +20,17 @@ const create = async newObject =>{
   return response.data
 }
 
-export default { getAll, create, setToken }
+const update = async ( id , currentObject ) => {
+  const response = await axios.put(`${baseUrl}/${id}`,currentObject)
+  return response.data
+
+}
+
+const remove = async (id) => {
+  const config = {
+    headers: { Authorization: token }
+  }
+  await axios.delete(`${baseUrl}/${id}`,config)
+}
+
+export default { getAll, create, setToken, update, remove }

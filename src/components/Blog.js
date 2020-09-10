@@ -21,11 +21,11 @@ const Blog = ({ blog, handleLike, handleRemove, username }) => {
 
   return (
     <div style={blogStyle}>
-      <div>
+      <div className="generalInfo">
         {blog.title} {blog.author}
         <button onClick={toggleVisibility}>{visible ? 'hide' : 'view'}</button>
       </div>
-      <div style={showWhenVisible}>
+      <div style={showWhenVisible} className="detailInfoHidden">
         <div>
           <a href={blog.url} target="_blank" rel="noopener noreferrer">{blog.url}</a>
         </div>

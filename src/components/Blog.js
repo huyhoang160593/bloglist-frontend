@@ -30,7 +30,7 @@ const Blog = ({ blog, handleLike, handleRemove, username }) => {
           <a href={blog.url} target="_blank" rel="noopener noreferrer">{blog.url}</a>
         </div>
         <div>
-          likes {blog.likes}
+          likes <span className="likeCount">{blog.likes}</span>
           <button onClick={handleLike}>like</button>
         </div>
         <div>
